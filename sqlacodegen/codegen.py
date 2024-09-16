@@ -33,6 +33,7 @@ _re_all_cap = re.compile('([a-z0-9])([A-Z])')
 _flask_prepend = 'db.'
 
 _dataclass = False
+_apiflask_endpoint = False
 
 
 class _DummyInflectEngine(object):
@@ -179,6 +180,17 @@ def _render_column(column, show_name):
         (['info={!r}'.format(comment)] if comment else [])
     ))
 
+def _renderAPISchema(modelTable):
+
+    text += '  class IOSchema(Schema):\n'
+
+    for attr, column in modelTable.attributes.items():
+        if isinstance(column, Column):
+            show_name = attr != column.name
+                text += '    ' + show_name + ' = ' + column.type.python_type + '\n'
+
+            text += '    {0} = {1}\n'.format(attr, _render_column(column, show_name))
+    return text
 
 def _render_constraint(constraint):
     def render_fk_options(*opts):
@@ -440,6 +452,9 @@ class ModelClass(Model):
 
     def renderEndpoint(self, conf):
         text = 'class {0}({1}):\n'.format(self.name, conf['resourceClass'])
+        if _apiflask_endpoint:
+          text += _renderAPISchema(self)
+
         decors = ""
         for dec in conf['decorators']:
             decors += '  {0}\n'.format(dec)
@@ -455,6 +470,14 @@ class ModelClass(Model):
         text +=decors
         text += '  def post(self):\n    body = request.get_json()\n    {0} = {1}{2}(**body)\n'.format(self.name.lower(), modelModule, self.name)
         text += '    {0}.session.add({1})\n    {0}.session.commit()\n'.format(conf['dbObject'], self.name.lower())
+
+        #put:
+
+
+        #patch
+
+
+        #delete
 
         return text
 
@@ -579,7 +602,7 @@ class CodeGenerator(object):
 
     def __init__(self, metadata, noindexes=False, noconstraints=False,
                  nojoined=False, noinflect=False, nobackrefs=False,
-                 flask=False, ignore_cols=None, noclasses=False, nocomments=False, notables=False, dataclass=False):
+                 flask=False, ignore_cols=None, noclasses=False, nocomments=False, notables=False, dataclass=False, apiflask_endpoint=False):
         super(CodeGenerator, self).__init__()
 
         if noinflect:
@@ -602,6 +625,11 @@ class CodeGenerator(object):
         if self.dataclass:
             global _dataclass
             _dataclass = True
+
+        self.apiflask_endpoint = apiflask_endpoint
+        if self.apiflask_endpoint:
+            global _apiflask_endpoint
+            _apiflask_endpoint = True
 
         # Pick association tables from the metadata into their own set, don't process them normally
         links = defaultdict(lambda: [])
