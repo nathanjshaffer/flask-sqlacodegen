@@ -187,7 +187,7 @@ def _renderAPISchema(modelTable):
     for attr, column in modelTable.attributes.items():
         if isinstance(column, Column):
             show_name = attr != column.name
-                text += '    ' + show_name + ' = ' + column.type.python_type + '\n'
+            text += '    ' + show_name + ' = ' + column.type.python_type + '\n'
 
             text += '    {0} = {1}\n'.format(attr, _render_column(column, show_name))
     return text
