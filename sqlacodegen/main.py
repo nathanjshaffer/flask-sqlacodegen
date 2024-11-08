@@ -8,9 +8,9 @@ import sys
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
 
-from sqlacodegen.codegen import CodeGenerator
+from codegen import CodeGenerator
 import sqlacodegen
-import sqlacodegen.dialects
+import dialects
 
 
 def import_dialect_specificities(engine):
@@ -41,6 +41,8 @@ def main():
     parser.add_argument('--ignore-cols', help="Don't check foreign key constraints on specified columns (comma-separated)")
     parser.add_argument('--nocomments', action='store_true', help="don't render column comments")
     parser.add_argument('--dataclass', action='store_true', help="add dataclass decorators for JSON serialization")
+    parser.add_argument('--sqlalchemyorm', action='store_true', help="use SQLAlchemy.orm module")
+
     args = parser.parse_args()
 
     if args.version:
@@ -52,7 +54,7 @@ def main():
         return
     default_schema = args.default_schema
     if not default_schema:
-        default_schema = None  
+        default_schema = None
 
     engine = create_engine(args.url)
     import_dialect_specificities(engine)
@@ -63,7 +65,7 @@ def main():
     outfile = codecs.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints,
                               args.nojoined, args.noinflect, args.nobackrefs,
-                              args.flask, ignore_cols, args.noclasses, args.nocomments, args.notables, args.dataclass)
+                              args.flask, ignore_cols, args.noclasses, args.nocomments, args.notables, args.dataclass, args.sqlalchemyorm)
     generator.render(outfile)
 
 
