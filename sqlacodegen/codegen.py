@@ -32,6 +32,7 @@ _re_all_cap = re.compile('([a-z0-9])([A-Z])')
 _flask_prepend = 'db.'
 
 _dataclass = False
+_sqla_orm = False
 
 
 class _DummyInflectEngine(object):
@@ -168,7 +169,11 @@ def _render_column(column, show_name):
         server_default = 'server_default=' + _flask_prepend + 'FetchedValue()'
 
     comment = getattr(column, 'comment', None)
-    return _flask_prepend + 'Column({0})'.format(', '.join(
+    if _sqla_orm:
+        column_string = 'mapped_column'
+    else:
+        column_string = 'Column'
+    return _flask_prepend + '{0}({1})'.format(column_string, ', '.join(
         ([repr(column.name)] if show_name else []) +
         ([_render_column_type(column.type)] if render_coltype else []) +
         [_render_constraint(x) for x in dedicated_fks] +
@@ -416,7 +421,10 @@ class ModelClass(Model):
             if isinstance(column, Column):
                 show_name = attr != column.name
                 if _dataclass:
-                    text += '    ' + attr + ' : ' + column.type.python_type.__name__  + '\n'
+                    if _sqla_orm:
+                        text += '    ' + attr + ' : ' + 'Mapped[{0}]\n'.format(column.type.python_type.__name__)
+                    else:
+                        text += '    ' + attr + ' : ' + column.type.python_type.__name__  + '\n'
 
                 text += '    {0} = {1}\n'.format(attr, _render_column(column, show_name))
 
@@ -551,7 +559,7 @@ class CodeGenerator(object):
 
     def __init__(self, metadata, noindexes=False, noconstraints=False,
                  nojoined=False, noinflect=False, nobackrefs=False,
-                 flask=False, ignore_cols=None, noclasses=False, nocomments=False, notables=False, dataclass=False):
+                 flask=False, ignore_cols=None, noclasses=False, nocomments=False, notables=False, dataclass=False, sqla_orm=False):
         super(CodeGenerator, self).__init__()
 
         if noinflect:
@@ -574,6 +582,10 @@ class CodeGenerator(object):
         if self.dataclass:
             global _dataclass
             _dataclass = True
+
+        self.sqla_orm = sqla_orm
+        global _sqla_orm
+        _sqla_orm = sqla_orm
 
         # Pick association tables from the metadata into their own set, don't process them normally
         links = defaultdict(lambda: [])
@@ -672,8 +684,13 @@ class CodeGenerator(object):
                 if model.parent_name == 'Base':
                     model.parent_name = parent_name
         else:
-            self.collector.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
-            self.collector.add_literal_import('sqlalchemy', 'MetaData')
+            if self.sqla_orm:
+                self.collector.add_literal_import('sqlalchemy.orm', 'DeclarativeBase')
+                self.collector.add_literal_import('sqlalchemy.orm', 'Mapped')
+                self.collector.add_literal_import('sqlalchemy.orm', 'mapped_column')
+            else:
+                self.collector.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
+                self.collector.add_literal_import('sqlalchemy', 'MetaData')
 
 
         if self.dataclass:
@@ -690,7 +707,10 @@ class CodeGenerator(object):
             print('db = SQLAlchemy()', file=outfile)
         else:
             if any(isinstance(model, ModelClass) for model in self.models):
-                print('Base = declarative_base()\nmetadata = Base.metadata', file=outfile)
+                if self.sqla_orm:
+                  print('class Base(DeclarativeBase):\n  pass', file=outfile)
+                else:
+                  print('Base = declarative_base()\nmetadata = Base.metadata', file=outfile)
             else:
                 print('metadata = MetaData()', file=outfile)
 

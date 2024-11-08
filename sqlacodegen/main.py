@@ -41,11 +41,8 @@ def main():
     parser.add_argument('--ignore-cols', help="Don't check foreign key constraints on specified columns (comma-separated)")
     parser.add_argument('--nocomments', action='store_true', help="don't render column comments")
     parser.add_argument('--dataclass', action='store_true', help="add dataclass decorators for JSON serialization")
+    parser.add_argument('--sqlalchemyorm', action='store_true', help="use SQLAlchemy.orm module")
 
-    model_options = parser.add_argument_group('model class generation options')
-    model_options.add_argument('--dataclass', action='store_true', help="add dataclass decorators for JSON serialization")
-    model_options.add_argument('--baseclass', help="base class model inherits from")
-    
     args = parser.parse_args()
 
     if args.version:
@@ -68,7 +65,7 @@ def main():
     outfile = codecs.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints,
                               args.nojoined, args.noinflect, args.nobackrefs,
-                              args.flask, ignore_cols, args.noclasses, args.nocomments, args.notables, args.dataclass)
+                              args.flask, ignore_cols, args.noclasses, args.nocomments, args.notables, args.dataclass, args.sqlalchemyorm)
     generator.render(outfile)
 
 
