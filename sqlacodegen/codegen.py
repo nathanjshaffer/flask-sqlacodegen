@@ -227,7 +227,8 @@ def _render_index(index):
 class ImportCollector(OrderedDict):
     def add_import(self, obj):
         type_ = type(obj) if not isinstance(obj, type) else obj
-        pkgname = 'sqlalchemy' if type_.__name__ in sqlalchemy.__all__ else type_.__module__  # @UndefinedVariable
+        pkgname = 'sqlalchemy' if hasattr(sqlalchemy, type_.__name__) else type_.__module__  # @UndefinedVariable
+        # pkgname = 'sqlalchemy' if type_.__name__ in sqlalchemy.__all__ else type_.__module__  # @UndefinedVariable
         self.add_literal_import(pkgname, type_.__name__)
 
     def add_literal_import(self, pkgname, name):
@@ -326,7 +327,7 @@ class ModelClass(Model):
             if _dataclass:
                 if column.type.python_type.__module__ != 'builtins':
                     collector.add_literal_import(column.type.python_type.__module__, column.type.python_type.__name__)
-            
+
 
         # Add many-to-one relationships
         pk_column_names = set(col.name for col in table.primary_key.columns)
@@ -373,13 +374,13 @@ class ModelClass(Model):
             child.add_imports(collector)
 
     def render(self):
-        global _dataclass        
-            
+        global _dataclass
+
         text = 'class {0}({1}):\n'.format(self.name, self.parent_name)
-        
+
         if _dataclass:
             text = '@dataclass\n' + text
-            
+
         text += '    __tablename__ = {0!r}\n'.format(self.table.name)
 
         # Render constraints and indexes as __table_args__
@@ -414,9 +415,9 @@ class ModelClass(Model):
         for attr, column in self.attributes.items():
             if isinstance(column, Column):
                 show_name = attr != column.name
-                if _dataclass:                    
+                if _dataclass:
                     text += '    ' + attr + ' : ' + column.type.python_type.__name__  + '\n'
-                
+
                 text += '    {0} = {1}\n'.format(attr, _render_column(column, show_name))
 
         # Render relationships
@@ -452,7 +453,7 @@ class Relationship(object):
             delimiter, end = ', ', ')'
 
         args.extend([key + '=' + value for key, value in self.kwargs.items()])
-        
+
         return _re_invalid_relationship.sub('_', text + delimiter.join(args) + end)
 
     def make_backref(self, relationships, classes):
@@ -509,7 +510,7 @@ class ManyToOneRelationship(Relationship):
         # common_fk_constraints = _get_common_fk_constraints(constraint.table, constraint.elements[0].column.table)
         # if len(common_fk_constraints) > 1:
         # self.kwargs['primaryjoin'] = "'{0}.{1} == {2}.{3}'".format(source_cls, constraint.columns[0], target_cls, constraint.elements[0].column.name)
-        if len(constraint.elements) > 1:  #  or 
+        if len(constraint.elements) > 1:  #  or
             self.kwargs['primaryjoin'] = "'and_({0})'".format(', '.join(['{0}.{1} == {2}.{3}'.format(source_cls, k.parent.name, target_cls, k.column.name)
                         for k in constraint.elements]))
         else:
@@ -561,14 +562,14 @@ class CodeGenerator(object):
 
         # exclude these column names from consideration when generating association tables
         _ignore_columns = ignore_cols or []
-        
+
         self.flask = flask
         if not self.flask:
             global _flask_prepend
             _flask_prepend = ''
 
         self.nocomments = nocomments
-        
+
         self.dataclass = dataclass
         if self.dataclass:
             global _dataclass
@@ -673,13 +674,13 @@ class CodeGenerator(object):
         else:
             self.collector.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
             self.collector.add_literal_import('sqlalchemy', 'MetaData')
-            
-            
+
+
         if self.dataclass:
             self.collector.add_literal_import('dataclasses', 'dataclass')
 
     def render(self, outfile=sys.stdout):
-        
+
         print(self.header, file=outfile)
 
         # Render the collected imports

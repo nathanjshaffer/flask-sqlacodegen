@@ -8,9 +8,9 @@ import sys
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
 
-from sqlacodegen.codegen import CodeGenerator
+from codegen import CodeGenerator
 import sqlacodegen
-import sqlacodegen.dialects
+import dialects
 
 
 def import_dialect_specificities(engine):
@@ -52,7 +52,7 @@ def main():
         return
     default_schema = args.default_schema
     if not default_schema:
-        default_schema = None  
+        default_schema = None
 
     engine = create_engine(args.url)
     import_dialect_specificities(engine)
