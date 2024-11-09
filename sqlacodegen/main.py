@@ -58,7 +58,7 @@ def main():
 
     engine = create_engine(args.url)
     import_dialect_specificities(engine)
-    metadata = MetaData()
+    metadata = MetaData(schema=default_schema)
     tables = args.tables.split(',') if args.tables else None
     ignore_cols = args.ignore_cols.split(',') if args.ignore_cols else None
     metadata.reflect(engine, args.schema, not args.noviews, tables)
