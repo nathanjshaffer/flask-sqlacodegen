@@ -380,7 +380,6 @@ class ModelClass(Model):
 
     def render(self):
         global _dataclass
-
         text = 'class {0}({1}):\n'.format(self.name, self.parent_name)
 
         if _dataclass:
@@ -403,7 +402,6 @@ class ModelClass(Model):
         table_kwargs = {}
         if self.schema:
             table_kwargs['schema'] = self.schema
-
         kwargs_items = ', '.join('{0!r}: {1!r}'.format(key, table_kwargs[key]) for key in table_kwargs)
         kwargs_items = '{{{0}}}'.format(kwargs_items) if kwargs_items else None
         if table_kwargs and not table_args:
@@ -561,7 +559,6 @@ class CodeGenerator(object):
                  nojoined=False, noinflect=False, nobackrefs=False,
                  flask=False, ignore_cols=None, noclasses=False, nocomments=False, notables=False, dataclass=False, sqla_orm=False):
         super(CodeGenerator, self).__init__()
-
         if noinflect:
             inflect_engine = _DummyInflectEngine()
         else:
