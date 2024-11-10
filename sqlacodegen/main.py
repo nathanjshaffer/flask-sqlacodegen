@@ -8,7 +8,8 @@ import sys
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
 
-from sqlacodegen.codegen import CodeGenerator
+# from sqlacodegen.codegen import CodeGenerator
+from codegen import CodeGenerator
 import sqlacodegen
 import sqlacodegen.dialects
 
@@ -25,7 +26,7 @@ def main():
     parser = argparse.ArgumentParser(description='Generates SQLAlchemy model code from an existing database.')
     parser.add_argument('url', nargs='?', help='SQLAlchemy url to the database')
     parser.add_argument('--version', action='store_true', help="print the version number and exit")
-    parser.add_argument('--schema', help='load tables from an alternate schema')
+    parser.add_argument('--schema', help='alternate schemas to load in addition to local schema (comma-separated)')
     parser.add_argument('--default-schema', help='default schema name for local schema object')
     parser.add_argument('--tables', help='tables to process (comma-separated, default: all)')
     parser.add_argument('--noviews', action='store_true', help="ignore views")
@@ -61,7 +62,10 @@ def main():
     metadata = MetaData(schema=default_schema)
     tables = args.tables.split(',') if args.tables else None
     ignore_cols = args.ignore_cols.split(',') if args.ignore_cols else None
-    metadata.reflect(engine, args.schema, not args.noviews, tables)
+    metadata.reflect(engine, views=not args.noviews, only=tables)
+    for schema in args.schema.split(','):
+        metadata.reflect(engine, schema, not args.noviews, tables)
+
     outfile = codecs.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints,
                               args.nojoined, args.noinflect, args.nobackrefs,
