@@ -63,8 +63,9 @@ def main():
     tables = args.tables.split(',') if args.tables else None
     ignore_cols = args.ignore_cols.split(',') if args.ignore_cols else None
     metadata.reflect(engine, views=not args.noviews, only=tables)
-    for schema in args.schema.split(','):
-        metadata.reflect(engine, schema, not args.noviews, tables)
+    if args.schema and args.schema != '':
+        for schema in args.schema.split(','):
+            metadata.reflect(engine, schema, not args.noviews, tables)
 
     outfile = codecs.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints,

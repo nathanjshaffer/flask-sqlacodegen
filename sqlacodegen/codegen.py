@@ -141,7 +141,7 @@ def _render_column_type(coltype):
     return text
 
 
-def _render_column(column, show_name):
+def _render_column(column, show_name, is_class = True):
     kwarg = []
     is_sole_pk = column.primary_key and len(column.table.primary_key) == 1
     dedicated_fks = [c for c in column.foreign_keys if len(c.constraint.columns) == 1]
@@ -169,7 +169,7 @@ def _render_column(column, show_name):
         server_default = 'server_default=' + _flask_prepend + 'FetchedValue()'
 
     comment = getattr(column, 'comment', None)
-    if _sqla_orm:
+    if _sqla_orm & is_class:
         column_string = 'mapped_column'
     else:
         column_string = 'Column'
@@ -298,7 +298,7 @@ class ModelTable(Model):
         text = 't_{0} = {1}Table(\n    {0!r},{2}\n'.format(self.table.name, _flask_prepend, met)
 
         for column in self.table.columns:
-            text += '    {0},\n'.format(_render_column(column, True))
+            text += '    {0},\n'.format(_render_column(column, True, is_class = False))
 
         for constraint in sorted(self.table.constraints, key=_get_constraint_sort_key):
             if isinstance(constraint, PrimaryKeyConstraint):
@@ -705,7 +705,7 @@ class CodeGenerator(object):
         else:
             if any(isinstance(model, ModelClass) for model in self.models):
                 if self.sqla_orm:
-                  print('class Base(DeclarativeBase):\n  pass', file=outfile)
+                  print('class Base(DeclarativeBase):\n  pass\nmetadata = Base.metadata', file=outfile)
                 else:
                   print('Base = declarative_base()\nmetadata = Base.metadata', file=outfile)
             else:
