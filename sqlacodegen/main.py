@@ -7,9 +7,10 @@ import sys
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
+from sqlalchemy import inspect
 
-# from sqlacodegen.codegen import CodeGenerator
-from codegen import CodeGenerator
+from sqlacodegen.codegen import CodeGenerator
+# from codegen import CodeGenerator
 import sqlacodegen
 import sqlacodegen.dialects
 
@@ -22,6 +23,7 @@ def import_dialect_specificities(engine):
         pass
 
 
+
 def main():
     parser = argparse.ArgumentParser(description='Generates SQLAlchemy model code from an existing database.')
     parser.add_argument('url', nargs='?', help='SQLAlchemy url to the database')
@@ -29,6 +31,7 @@ def main():
     parser.add_argument('--schema', help='alternate schemas to load in addition to local schema (comma-separated)')
     parser.add_argument('--default-schema', help='default schema name for local schema object')
     parser.add_argument('--tables', help='tables to process (comma-separated, default: all)')
+    parser.add_argument('--ignore-tables', help="Don't load specified tables (comma-separated)")
     parser.add_argument('--noviews', action='store_true', help="ignore views")
     parser.add_argument('--noindexes', action='store_true', help='ignore indexes')
     parser.add_argument('--noconstraints', action='store_true', help='ignore constraints')
@@ -59,14 +62,22 @@ def main():
 
     engine = create_engine(args.url)
     import_dialect_specificities(engine)
+    
     metadata = MetaData(schema=default_schema)
     tables = args.tables.split(',') if args.tables else None
     ignore_cols = args.ignore_cols.split(',') if args.ignore_cols else None
-    metadata.reflect(engine, views=not args.noviews, only=tables)
     if args.schema and args.schema != '':
         for schema in args.schema.split(','):
-            metadata.reflect(engine, schema, not args.noviews, tables)
-
+          metadata.reflect(engine, schema, views=not args.noviews, only=tables, resolve_fks=False)
+    else:
+      metadata.reflect(engine, views=not args.noviews, only=tables)
+      
+    
+    ignore_tables = args.ignore_tables.split(',') if args.ignore_tables else None
+    for table in ignore_tables:
+      metadata.remove(metadata.tables[table])
+      
+      
     outfile = codecs.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints,
                               args.nojoined, args.noinflect, args.nobackrefs,
